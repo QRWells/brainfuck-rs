@@ -69,40 +69,48 @@ pub fn compile(source: &str) -> Result<Vec<BrainfuckIR>, CompileError> {
     }
 }
 
-pub fn optimize(code: Vec<BrainfuckIR>) -> Vec<BrainfuckIR> {
-    let mut opt = vec![];
+pub fn optimize(code: &mut Vec<BrainfuckIR>) -> usize {
+    let mut cur = 0;
     let mut i = 0;
+    let prev = code.len();
 
     macro_rules! compact {
         ($ir:ident, $val:ident) => {{
             let mut j = i + 1;
+            let mut v = $val;
             while j < code.len() {
                 if let $ir(val_new) = code[j] {
-                    $val = $val.wrapping_add(val_new);
+                    v = v.wrapping_add(val_new);
                     j += 1;
                 } else {
                     break;
                 }
             }
             i = j;
-            opt.push($ir($val));
+            code[cur] = $ir(v);
+            cur += 1;
         }};
     }
 
     while i < code.len() {
         use BrainfuckIR::*;
         match code[i] {
-            Add(mut val) => compact!(Add, val),
-            Sub(mut val) => compact!(Sub, val),
-            PtrAdd(mut val) => compact!(PtrAdd, val),
-            PtrSub(mut val) => compact!(PtrSub, val),
+            Add(val) => compact!(Add, val),
+            Sub(val) => compact!(Sub, val),
+            PtrAdd(val) => compact!(PtrAdd, val),
+            PtrSub(val) => compact!(PtrSub, val),
             Write | Read | Jz | Jnz => {
-                opt.push(code[i]);
+                code[cur] = code[i];
+                cur += 1;
                 i += 1;
             }
         }
     }
-    opt
+
+    code.truncate(cur);
+    code.shrink_to_fit();
+
+    prev - code.len()
 }
 
 #[cfg(test)]
@@ -140,9 +148,11 @@ mod test {
     fn optimize_test() {
         let code = compile("++++++++++----->><<");
         assert!(code.is_ok());
-        let opt = optimize(code.unwrap());
+        let mut code = code.unwrap();
+        let opt = optimize(&mut code);
+        assert_eq!(opt, 15);
         assert_eq!(
-            opt,
+            code,
             vec![
                 BrainfuckIR::Add(10),
                 BrainfuckIR::Sub(5),
@@ -151,12 +161,13 @@ mod test {
             ]
         );
 
-        let code = vec![
+        let mut code = vec![
             BrainfuckIR::Add(2),
             BrainfuckIR::Add(3),
             BrainfuckIR::Add(4),
         ];
-        let opt = optimize(code);
-        assert_eq!(opt, vec![BrainfuckIR::Add(9)]);
+        let opt = optimize(&mut code);
+        assert_eq!(opt, 2);
+        assert_eq!(code, vec![BrainfuckIR::Add(9)]);
     }
 }
