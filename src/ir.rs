@@ -1,11 +1,9 @@
-use std::ops::Add;
-
 use crate::error::{CompileError, CompileErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BrainfuckIR {
-    Add(usize),    // +
-    Sub(usize),    // -
+    Add(u8),       // +
+    Sub(u8),       // -
     PtrAdd(usize), // >
     PtrSub(usize), // <
     Write,         // .

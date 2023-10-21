@@ -1,6 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+use thiserror::Error;
+
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum CompileErrorKind {
     #[error("Unexpected character")]
     UnclosedCharacter,
@@ -10,7 +12,7 @@ pub enum CompileErrorKind {
     UnexpectedRightBracket,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub struct CompileError {
     pub(crate) line: usize,
     pub(crate) col: usize,
@@ -21,4 +23,13 @@ impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} at line {}:{}", self.kind, self.line, self.col)
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RuntimeError {
+    #[error("IO: {0}")]
+    IO(#[from] std::io::Error),
+
+    #[error("overflow")]
+    Overflow,
 }
